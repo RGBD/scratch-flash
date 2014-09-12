@@ -308,11 +308,10 @@ public class ScratchObj extends Sprite {
 	public function defaultArgsFor(op:String, specDefaults:Array):Array {
 		// Return an array of default parameter values for the given operation (primitive name).
 		// For most ops, this will simply return the array of default arg values from the command spec.
-		var app:Scratch = root as Scratch;
 		var sprites:Array;
 
 		if ((['broadcast:', 'doBroadcastAndWait', 'whenIReceive'].indexOf(op)) > -1) {
-			var msgs:Array = app.runtime.collectBroadcasts();
+			var msgs:Array = Scratch.app.runtime.collectBroadcasts();
 			return (msgs.length > 0) ? [msgs[0]] : ['message1'];
 		}
 		if ((['lookLike:', 'startScene', 'startSceneAndWait', 'whenSceneStarts'].indexOf(op)) > -1) {
@@ -323,11 +322,11 @@ public class ScratchObj extends Sprite {
 		}
 		if ('createCloneOf' == op) {
 			if (!isStage) return ['_myself_'];
-			sprites = app.stagePane.sprites();
+			sprites = Scratch.app.stagePane.sprites();
 			return (sprites.length > 0) ? [sprites[sprites.length - 1].objName] : [''];
 		}
 		if ('getAttribute:of:' == op) {
-			sprites = app.stagePane.sprites();
+			sprites = Scratch.app.stagePane.sprites();
 			return (sprites.length > 0) ? ['x position', sprites[sprites.length - 1].objName] : ['volume', '_stage_'];
 		}
 
@@ -446,6 +445,7 @@ public class ScratchObj extends Sprite {
 		if (v == null) { // not found; create it
 			v = new Variable(varName, 0);
 			variables.push(v);
+			Scratch.app.updatePalette(false);
 		}
 		return v;
 	}
@@ -499,6 +499,7 @@ public class ScratchObj extends Sprite {
 		if (list == null) { // not found; create it
 			list = new ListWatcher(listName, [], this);
 			lists.push(list);
+			Scratch.app.updatePalette(false);
 		}
 		return list;
 	}
@@ -592,16 +593,16 @@ public class ScratchObj extends Sprite {
 
 	public function readJSON(jsonObj:Object):void {
 		objName = jsonObj.objName;
-		variables = (jsonObj.variables == undefined) ? [] : jsonObj.variables;
+		variables = jsonObj.variables || [];
 		for (var i:int = 0; i < variables.length; i++) {
 			var varObj:Object = variables[i];
 			variables[i] = Scratch.app.runtime.makeVariable(varObj);
 		}
-		lists = (jsonObj.lists == undefined) ? [] : jsonObj.lists;
-		scripts = (jsonObj.scripts == undefined) ? [] : jsonObj.scripts;
-		scriptComments = (jsonObj.scriptComments == undefined) ? [] : jsonObj.scriptComments;
-		sounds = (jsonObj.sounds == undefined) ? [] : jsonObj.sounds;
-		costumes = jsonObj.costumes;
+		lists = jsonObj.lists || [];
+		scripts = jsonObj.scripts || [];
+		scriptComments = jsonObj.scriptComments || [];
+		sounds = jsonObj.sounds || [];
+		costumes = jsonObj.costumes || [];
 		currentCostumeIndex = jsonObj.currentCostumeIndex;
 		if (isNaNOrInfinity(currentCostumeIndex)) currentCostumeIndex = 0;
 	}
@@ -655,6 +656,55 @@ public class ScratchObj extends Sprite {
 			costumes[i] = new ScratchCostume('json temp', null);
 			costumes[i].readJSON(jsonObj);
 		}
+	}
+
+	public function getSummary():String {
+		var s:Array = [];
+		s.push(h1(objName));
+		if (variables.length) {
+			s.push(h2(Translator.map("Variables")));
+			for each (var v:Variable in variables) {
+				s.push("- " + v.name + " = " + v.value);
+			}
+			s.push("");
+		}
+		if (lists.length) {
+			s.push(h2(Translator.map("Lists")));
+			for each (var list:ListWatcher in lists) {
+				s.push("- " + list.listName + (list.contents.length ? ":" : ""));
+				for each (var item:* in list.contents) {
+					s.push("    - " + item);
+				}
+			}
+			s.push("");
+		}
+		s.push(h2(Translator.map(isStage ? "Backdrops" : "Costumes")));
+		for each (var costume:ScratchCostume in costumes) {
+			s.push("- " + costume.costumeName);
+		}
+		s.push("");
+		if (sounds.length) {
+			s.push(h2(Translator.map("Sounds")));
+			for each (var sound:ScratchSound in sounds) {
+				s.push("- " + sound.soundName);
+			}
+			s.push("");
+		}
+		if (scripts.length) {
+			s.push(h2(Translator.map("Scripts")));
+			for each (var script:Block in scripts) {
+				s.push(script.getSummary());
+				s.push("")
+			}
+		}
+		return s.join("\n");
+	}
+
+	protected static function h1(s:String, ch:String = "="):String {
+		return s + "\n" + new Array(s.length + 1).join(ch) + "\n";
+	}
+	protected static function h2(s:String):String {
+		return h1(s, "-");
 	}
 
 }}

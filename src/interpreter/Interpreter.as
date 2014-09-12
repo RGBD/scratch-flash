@@ -82,6 +82,7 @@ public class Interpreter {
 	private var warpThread:Thread;			// thread that is in warp mode
 	private var warpBlock:Block;			// proc call block that entered warp mode
 
+	private var bubbleThread:Thread;			// thread for reporter bubble
 	public var askThread:Thread;				// thread that opened the ask prompt
 
 	protected var debugFunc:Function;
@@ -114,16 +115,6 @@ public class Interpreter {
 	public function threadCount():int { return threads.length }
 
 	public function toggleThread(b:Block, targetObj:*, startupDelay:int = 0):void {
-		if (b.isReporter) {
-			// click on reporter shows value in log
-			currentMSecs = getTimer();
-			var oldThread:Thread = activeThread;
-			activeThread = new Thread(b, targetObj);
-			var p:Point = b.localToGlobal(new Point(0, 0));
-			app.showBubble(String(evalCmd(b)), p.x, p.y, b.getRect(app.stage).width);
-			activeThread = oldThread;
-			return;
-		}
 		var i:int, newThreads:Array = [], wasRunning:Boolean = false;
 		for (i = 0; i < threads.length; i++) {
 			if ((threads[i].topBlock == b) && (threads[i].target == targetObj)) {
@@ -134,12 +125,36 @@ public class Interpreter {
 		}
 		threads = newThreads;
 		if (wasRunning) {
-			if(app.editMode) b.hideRunFeedback();
+			if (app.editMode) b.hideRunFeedback();
 			clearWarpBlock();
 		} else {
-			b.showRunFeedback();
-			threads.push(new Thread(b, targetObj, startupDelay));
+			var topBlock:Block = b;
+			if (b.isReporter) {
+				// click on reporter shows value in bubble
+				if (bubbleThread) {
+					toggleThread(bubbleThread.topBlock, bubbleThread.target);
+				}
+				var reporter:Block = b;
+				var interp:Interpreter = this;
+				b = new Block("%s", "", -1);
+				b.opFunction = function(b:Block):void {
+					var p:Point = reporter.localToGlobal(new Point(0, 0));
+					app.showBubble(String(interp.arg(b, 0)), p.x, p.y, reporter.getRect(app.stage).width);
+				};
+				b.args[0] = reporter;
+			}
+			if (app.editMode) topBlock.showRunFeedback();
+			var t:Thread = new Thread(b, targetObj, startupDelay);
+			if (topBlock.isReporter) bubbleThread = t;
+			t.topBlock = topBlock;
+			threads.push(t);
 			app.threadStarted();
+		}
+	}
+
+	public function showAllRunFeedback():void {
+		for each (var t:Thread in threads) {
+			t.topBlock.showRunFeedback();
 		}
 	}
 
@@ -181,7 +196,7 @@ public class Interpreter {
 		}
 		if (!wasRunning) {
 			threads.push(newThread);
-			if(app.editMode) b.showRunFeedback();
+			if (app.editMode) b.showRunFeedback();
 			app.threadStarted();
 		}
 		return newThread;
@@ -215,7 +230,10 @@ public class Interpreter {
 				var newThreads:Array = [];
 				for each (var t:Thread in threads) {
 					if (t.block != null) newThreads.push(t);
-					else if(app.editMode) t.topBlock.hideRunFeedback();
+					else if (app.editMode) {
+						if (t == bubbleThread) bubbleThread = null;
+						t.topBlock.hideRunFeedback();
+					}
 				}
 				threads = newThreads;
 				if (threads.length == 0) return;

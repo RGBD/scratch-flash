@@ -183,7 +183,7 @@ public class ScratchRuntime {
 		}
 	}
 
-	private function startKeyHats(ch:int):void {
+	public function startKeyHats(ch:int):void {
 		var keyName:String = null;
 		if (('a'.charCodeAt(0) <= ch) && (ch <= 'z'.charCodeAt(0))) keyName = String.fromCharCode(ch);
 		if (('0'.charCodeAt(0) <= ch) && (ch <= '9'.charCodeAt(0))) keyName = String.fromCharCode(ch);
@@ -281,10 +281,10 @@ public class ScratchRuntime {
 		if ('whenSensorGreaterThan' == hat.op) {
 			var sensorName:String = interp.arg(hat, 0);
 			var threshold:Number = interp.numarg(hat, 1);
-			trigger((
-					(('loudness' == sensorName) && (soundLevel() > threshold)) ||
-					(('timer' == sensorName) && (timer() > threshold)) ||
-					(('video motion' == sensorName) && (VideoMotionPrims.readMotionSensor('motion', target) > threshold))));
+			trigger(
+				('loudness' == sensorName && soundLevel() > threshold) ||
+				('timer' == sensorName && timer() > threshold) ||
+				('video motion' == sensorName && target.visible && VideoMotionPrims.readMotionSensor('motion', target) > threshold));
 		} else if ('whenSensorConnected' == hat.op) {
 			trigger(getBooleanSensor(interp.arg(hat, 0)));
 		} else if (app.jsEnabled) {
@@ -383,7 +383,7 @@ public class ScratchRuntime {
 		var newProject:ScratchStage;
 		stopAll();
 		data.position = 0;
-		if (data.readUTFBytes(8) != 'ScratchV') {
+		if (data.length < 8 || data.readUTFBytes(8) != 'ScratchV') {
 			data.position = 0;
 			newProject = new ProjectIO(app).decodeProjectFromZipFile(data);
 			if (!newProject) {
@@ -472,7 +472,9 @@ public class ScratchRuntime {
 	public function hideAskPrompt(p:AskPrompter):void {
 		interp.askThread = null;
 		lastAnswer = p.answer();
-		p.parent.removeChild(p);
+		if (p.parent) {
+			p.parent.removeChild(p);
+		}
 		app.stage.focus = null;
 	}
 
@@ -1082,8 +1084,9 @@ public class ScratchRuntime {
 				for each (var c:ScratchComment in obj[1]) {
 					app.scriptsPane.addChild(c);
 				}
-				app.scriptsPane.fixCommentLayout();
 			}
+			app.scriptsPane.saveScripts();
+			if (b is Block) app.updatePalette();
 		}
 	}
 

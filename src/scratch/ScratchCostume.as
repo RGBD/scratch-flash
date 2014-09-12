@@ -59,7 +59,7 @@ public class ScratchCostume {
 	public var baseLayerBitmap:BitmapData;
 	public var baseLayerID:int = -1;
 	public var baseLayerMD5:String;
-	public var baseLayerData:ByteArray;
+	private var __baseLayerData:ByteArray;
 
 	public static const WasEdited:int = -10; // special baseLayerID used to indicate costumes that have been edited
 
@@ -74,7 +74,7 @@ public class ScratchCostume {
 	public var textLayerBitmap:BitmapData;
 	public var textLayerID:int = -1;
 	public var textLayerMD5:String;
-	public var textLayerData:ByteArray;
+	private var __textLayerData:ByteArray;
 
 	public var text:String;
 	public var textRect:Rectangle;
@@ -101,6 +101,24 @@ public class ScratchCostume {
 			setSVGData(data, (centerX == 99999));
 			prepareToSave();
 		}
+	}
+
+	public function get baseLayerData():ByteArray {
+		return __baseLayerData;
+	}
+
+	public function set baseLayerData(data:ByteArray):void {
+		__baseLayerData = data;
+		baseLayerMD5 = null;
+	}
+
+	public function get textLayerData():ByteArray {
+		return __textLayerData;
+	}
+
+	public function set textLayerData(data:ByteArray):void {
+		__textLayerData = data;
+		textLayerMD5 = null;
 	}
 
 	public static function scaleForScratch(bm:BitmapData):BitmapData {
@@ -168,7 +186,7 @@ public class ScratchCostume {
 	public function setSVGData(data:ByteArray, computeCenter:Boolean, fromEditor:Boolean = true):void {
 		// Initialize an SVG costume.
 		function refreshAfterImagesLoaded():void {
-			svgSprite = new SVGDisplayRender().renderAsSprite(svgRoot);
+			svgSprite = new SVGDisplayRender().renderAsSprite(svgRoot, false, true);
 			if (Scratch.app && Scratch.app.viewedObj() && (Scratch.app.viewedObj().currentCostume() == thisC)) {
 				Scratch.app.viewedObj().updateCostume();
 				Scratch.app.refreshImageTab(fromEditor);
@@ -187,7 +205,7 @@ public class ScratchCostume {
 
 	public function setSVGRoot(svg:SVGElement, computeCenter:Boolean):void {
 		svgRoot = svg;
-		svgSprite = new SVGDisplayRender().renderAsSprite(svgRoot);
+		svgSprite = new SVGDisplayRender().renderAsSprite(svgRoot, false, true);
 		var r:Rectangle;
 		var viewBox:Array = svg.getAttribute('viewBox', '').split(' ');
 		if (viewBox.length == 4) r = new Rectangle(viewBox[0], viewBox[1], viewBox[2], viewBox[3]);
@@ -227,7 +245,7 @@ public class ScratchCostume {
 
 	public function displayObj():DisplayObject {
 		if (svgRoot) {
-			if (!svgSprite) svgSprite = new SVGDisplayRender().renderAsSprite(svgRoot);
+			if (!svgSprite) svgSprite = new SVGDisplayRender().renderAsSprite(svgRoot, false, true);
 			return svgSprite;
 		}
 

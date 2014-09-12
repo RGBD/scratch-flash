@@ -54,7 +54,7 @@ package {
 
 public class Scratch extends Sprite {
 	// Version
-	public static const versionString:String = 'v422';
+	public static const versionString:String = 'v424';
 	public static var app:Scratch; // static reference to the app, used for debugging
 
 	// Display modes
@@ -577,6 +577,7 @@ public class Scratch extends Sprite {
 		Menu.removeMenusFrom(stage);
 		editMode = newMode;
 		if (editMode) {
+			interp.showAllRunFeedback();
 			hide(playerBG);
 			show(topBarPart);
 			show(libraryPart);
@@ -734,6 +735,10 @@ public class Scratch extends Sprite {
 			m.addItem('Revert', revertToOriginalProject);
 		}
 
+		if (b.lastEvent.shiftKey) {
+			m.addLine();
+			m.addItem('Save Project Summary', saveSummary);
+		}
 		if (b.lastEvent.shiftKey && jsEnabled) {
 			m.addLine();
 			m.addItem('Import experimental extension', function():void {
@@ -849,6 +854,12 @@ public class Scratch extends Sprite {
 		return result;
 	}
 
+	public function saveSummary():void {
+		var name:String = (projectName() || "project") + ".txt";
+		var file:FileReference = new FileReference();
+		file.save(stagePane.getSummary(), fixFileName(name));
+	}
+
 	public function toggleSmallStage():void {
 		setSmallStageMode(!stageIsContracted);
 	}
@@ -955,7 +966,10 @@ public class Scratch extends Sprite {
 
 	public function addNewSprite(spr:ScratchSprite, showImages:Boolean = false, atMouse:Boolean = false):void {
 		var c:ScratchCostume, byteCount:int;
-		for each (c in spr.costumes) byteCount + c.baseLayerData.length;
+		for each (c in spr.costumes) {
+			if (!c.baseLayerData) c.prepareToSave()
+			byteCount += c.baseLayerData.length;
+		}
 		if (!okayToAdd(byteCount)) return; // not enough room
 		spr.objName = stagePane.unusedSpriteName(spr.objName);
 		spr.indexInLibrary = 1000000; // add at end of library
