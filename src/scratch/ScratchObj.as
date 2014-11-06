@@ -121,10 +121,10 @@ public class ScratchObj extends Sprite {
 		updateImage();
 	}
 
-	public function updateCostume():void { updateImage() }
+	public function updateCostume():void { updateImage(); }
 
 	public function currentCostume():ScratchCostume {
-		return costumes[Math.round(currentCostumeIndex) % costumes.length]
+		return costumes[Math.round(currentCostumeIndex) % costumes.length];
 	}
 
 	public function costumeNumber():int {
@@ -264,13 +264,15 @@ public class ScratchObj extends Sprite {
 	}
 
 	protected function updateEffects():void {
-		if((parent && parent is ScratchStage) || this is ScratchStage) {
-			if(parent is ScratchStage)
-				(parent as ScratchStage).updateSpriteEffects(this, filterPack.getAllSettings());
-			else {
-				(this as ScratchStage).updateSpriteEffects(img, filterPack.getAllSettings());
-//				if((this as ScratchStage).videoImage)
-//					(this as ScratchStage).updateSpriteEffects((this as ScratchStage).videoImage, filterPack.getAllSettings());
+		SCRATCH::allow3d {
+			if((parent && parent is ScratchStage) || this is ScratchStage) {
+				if(parent is ScratchStage)
+					(parent as ScratchStage).updateSpriteEffects(this, filterPack.getAllSettings());
+				else {
+					(this as ScratchStage).updateSpriteEffects(img, filterPack.getAllSettings());
+//					if((this as ScratchStage).videoImage)
+//						(this as ScratchStage).updateSpriteEffects((this as ScratchStage).videoImage, filterPack.getAllSettings());
+				}
 			}
 		}
 	}
@@ -287,8 +289,10 @@ public class ScratchObj extends Sprite {
 		img.transform.colorTransform = clearColorTrans;
 		clearCachedBitmap();
 
-		if(parent && parent is ScratchStage) {
-			(parent as ScratchStage).updateSpriteEffects(this, null);
+		SCRATCH::allow3d {
+			if (parent && parent is ScratchStage) {
+				(parent as ScratchStage).updateSpriteEffects(this, null);
+			}
 		}
 	}
 
@@ -437,6 +441,11 @@ public class ScratchObj extends Sprite {
 			if (v.name == varName) return true;
 		}
 		return false;
+	}
+
+	public function hasName(varName:String):Boolean {
+		var p:ScratchObj = parent as ScratchObj;
+		return ownsVar(varName) || ownsList(varName) || p && (p.ownsVar(varName) || p.ownsList(varName));
 	}
 
 	public function lookupOrCreateVar(varName:String):Variable {
